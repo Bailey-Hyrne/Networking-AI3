@@ -1,4 +1,5 @@
-The setup will include red herring flags in various web directories and the real flag hidden within a MySQL database, which can only be accessed via SQL injection.
+The setup will include red herring flags in various web directories and the real flag hidden within the MySQL database of the website, which can only be accessed via SQL injection.
+
 Step 1: Set Up the Apache2 Web Server and MySQL Database
 
 Install Apache2 and MySQL First, ensure your server has Apache2 and MySQL installed and running. You’ll also need PHP and necessary modules to create dynamic webpages.
