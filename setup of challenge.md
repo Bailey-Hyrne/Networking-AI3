@@ -2,10 +2,11 @@ Step 1: Install Apache and MySQL (LAMP Stack)
 Before setting up the vulnerable PHP page, ensure you have a LAMP (Linux, Apache, MySQL, PHP) stack installed on your machine. If it’s not already installed, follow these steps to install it.
 
 1.1 Install Apache Web Server
-bash
+'''bash
 Copy code
 sudo apt update
 sudo apt install apache2
+```
 1.2 Install MySQL Server
 bash
 Copy code
