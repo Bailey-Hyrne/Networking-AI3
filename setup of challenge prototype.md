@@ -1,194 +1,206 @@
-The setup will include red herring flags in various web directories and the real flag hidden within the MySQL database of the website, which can only be accessed via SQL injection.
+Step 1: Install Apache and MySQL (LAMP Stack)
+Before setting up the vulnerable PHP page, ensure you have a LAMP (Linux, Apache, MySQL, PHP) stack installed on your machine. If it’s not already installed, follow these steps to install it.
 
-Step 1: Set Up the Apache2 Web Server and MySQL Database
-
-Install Apache2 and MySQL First, ensure your server has Apache2 and MySQL installed and running. You’ll also need PHP and necessary modules to create dynamic webpages.
-
-```bash
+1.1 Install Apache Web Server
+bash
+Copy code
 sudo apt update
-sudo apt install apache2 mysql-server php libapache2-mod-php php-mysql
-```
-Start Apache2 and MySQL
+sudo apt install apache2
+1.2 Install MySQL Server
+bash
+Copy code
+sudo apt install mysql-server
+1.3 Install PHP and Required Extensions
+bash
+Copy code
+sudo apt install php php-mysqli libapache2-mod-php
+1.4 Restart Apache to Apply Changes
+bash
+Copy code
+sudo systemctl restart apache2
+Step 2: Configure MySQL Database
+Create a MySQL database and a users table for storing login credentials.
 
-```bash
-sudo systemctl start apache2
-sudo systemctl start mysql
-```
-Step 2: Create the MySQL Database for the Challenge
-
-Log into MySQL as Root
-
-```bash
+2.1 Log in to MySQL
+bash
+Copy code
 sudo mysql -u root -p
-```
-Create a Database and User Table
-
-Create a database named ctf_challenge and a table to store user credentials along with the real flag.
-
-```sql
-
+2.2 Create the Database
+sql
+Copy code
 CREATE DATABASE ctf_challenge;
+2.3 Create the users Table
+sql
+Copy code
 USE ctf_challenge;
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50),
-    password VARCHAR(50),
-    flag VARCHAR(255)
+    username VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    flag VARCHAR(255) DEFAULT NULL
 );
-```
-Insert Admin Credentials and Real Flag
+2.4 Insert Users
+Insert the users into the users table with a vulnerable SELECT query. The admin account will contain the real flag.
 
-Insert an admin user with a placeholder password and store the real flag within the table.
+sql
+Copy code
+INSERT INTO users (username, password, flag) 
+VALUES 
+    ('KingCeo', 'SigmaWolf123', NULL),
+    ('Ted Smith', 'Hacked123', NULL),
+    ('admin', 'password123', '402acb1c3e3f37da6e1bb6cacadc315d'); -- real flag hidden under admin
+2.5 Exit MySQL
+sql
+Copy code
+EXIT;
+Step 3: Create the Vulnerable Login Page
+Create the vulnerable login.php file that allows for SQL injection.
 
-```sql
+3.1 Create login.php File
+bash
+Copy code
+sudo nano /var/www/html/login.php
+3.2 Add the Vulnerable PHP Code
+Insert the following PHP code into login.php:
 
-    INSERT INTO users (username, password, flag) 
-    VALUES ('admin', 'password123', 'FLAG{REAL_SQL_INJECTION_FLAG}');
-```
-    Exit MySQL when done.
+php
+Copy code
+<?php
+// Database connection
+$host = 'localhost';
+$db = 'ctf_challenge';
+$user = 'root';
+$pass = '';
 
-Step 3: Create a Vulnerable Login Page
+$conn = new mysqli($host, $user, $pass, $db);
 
-This login page will allow participants to bypass authentication using SQL injection.
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
-    Create the PHP Login Script
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $username = $_POST['username'];
+    $password = $_POST['password'];
 
-    Create the login.php file in the Apache web root directory (/var/www/html/).
+    // Vulnerable query
+    $query = "SELECT * FROM users WHERE username='$username' AND password='$password'";
+    $result = $conn->query($query);
 
-    ```bash
-
-    sudo nano /var/www/html/login.php
-    ```
-Insert the following PHP code, which contains a SQL injection vulnerability:
-
-```php
-
-    <?php
-    // Database connection
-    $host = 'localhost';
-    $db = 'ctf_challenge';
-    $user = 'root';
-    $pass = '';
-
-    $conn = new mysqli($host, $user, $pass, $db);
-
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
-
-        $query = "SELECT * FROM users WHERE username='$username' AND password='$password'";
-        $result = $conn->query($query);
-
-        if ($result->num_rows > 0) {
-            $row = $result->fetch_assoc();
-            echo "Login successful! Welcome, " . $row['username'] . "<br>";
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        echo "Login successful! Welcome, " . $row['username'] . "<br>";
+        if ($row['flag']) {
             echo "Your flag is: " . $row['flag'];
-        } else {
-            echo "Invalid login credentials!";
         }
+    } else {
+        echo "Invalid login credentials!";
     }
-    ?>
+}
+?>
 
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login</title>
-    </head>
-    <body>
-        <h2>Login Page</h2>
-        <form method="POST" action="">
-            Username: <input type="text" name="username"><br>
-            Password: <input type="password" name="password"><br>
-            <input type="submit" value="Login">
-        </form>
-    </body>
-    </html>
-```
-    This page allows login attempts, but SQL queries are not sanitized, allowing SQL injection.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Page</title>
+</head>
+<body>
+    <h2>Login</h2>
+    <form method="POST" action="">
+        Username: <input type="text" name="username"><br>
+        Password: <input type="password" name="password"><br>
+        <input type="submit" value="Login">
+    </form>
+</body>
+</html>
+3.3 Save and Close the File
+Press CTRL+X, then Y to save the file and exit.
 
-Step 4: Set Up Red Herring Flags
+Step 4: Create Fake Flag Files (Red Herrings)
+Set up directories and files that will serve as fake flags to mislead users during their exploration.
 
-Place multiple red herring flags across the server in visible web directories. These will serve to distract participants from the real goal.
+4.1 Create Directories for Fake Flags
+bash
+Copy code
+sudo mkdir -p /var/www/html/fake_flags/images
+sudo mkdir -p /var/www/html/fake_flags/text_files
+4.2 Create Fake Flag Files
+bash
+Copy code
+echo "This is not the real flag. Fake flag: FLAG{FAKE_FLAG_1}" | sudo tee /var/www/html/fake_flags/text_files/fake1.txt
+echo "FLAG{FAKE_FLAG_2}" | sudo tee /var/www/html/fake_flags/text_files/fake2.txt
+4.3 Create Fake Flag HTML Pages
+Create fake_flag1.html and other similar fake pages.
 
-    Create Fake Flag Directories and Files
-
-    You can organize red herring flags in different folders and formats (text files, HTML files, images, videos). Start by creating the directories.
-
-    ```bash
-    sudo mkdir -p /var/www/html/fake_flags/images
-    sudo mkdir -p /var/www/html/fake_flags/text_files
-    ```
-Create Red Herring Flag Files
-
-Create several text, HTML, and image files that display fake flags.
-
-```bash
-
-sudo nano /var/www/html/fake_flags/fake1.txt
-```
-Add the following content to the file:
-
-
-```bash
-This is not the real flag. Fake flag: FLAG{FAKE_FLAG_1}
-```
-Repeat this for other files (fake2.txt, fake_image.jpg, etc.), adding fake flag content in different locations. You can use tools like exiftool to add metadata to image files with more fake flags.
-
-Create HTML Pages Displaying Fake Flags
-
-You can also create HTML pages with embedded fake flags:
-
-```bash
-
+bash
+Copy code
 sudo nano /var/www/html/fake_flags/fake_flag1.html
-
-Insert the following HTML:
+Add this content:
 
 html
+Copy code
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fake Flag 1</title>
+</head>
+<body>
+    <h1>This is not the real flag.</h1>
+    <p>Fake flag: FLAG{FAKE_FLAG_1}</p>
+</body>
+</html>
+Repeat the process for additional fake flag pages (fake_flag2.html, etc.).
 
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Fake Flag 1</title>
-    </head>
-    <body>
-        <h1>This is not the real flag.</h1>
-        <p>Fake flag: FLAG{FAKE_FLAG_1}</p>
-    </body>
-    </html>
-```
-    These fake flags will mislead participants while they explore the directories.
+Step 5: Configure the Misconfigured Firewall
+Set up UFW (Uncomplicated Firewall) to expose MySQL and restrict services as intended.
 
-Step 5: Configure a Misconfigured Firewall
+5.1 Enable UFW and Expose MySQL Port
+bash
+Copy code
+sudo ufw enable
+sudo ufw allow 3306/tcp     # Allow MySQL port
+5.2 Restrict Other Services
+bash
+Copy code
+sudo ufw allow 80/tcp       # Allow HTTP
+sudo ufw deny 443/tcp       # Block HTTPS
+sudo ufw allow from 192.168.1.100 to any port 22  # Restrict SSH to a specific IP (optional)
+sudo ufw default deny incoming  # Deny all other incoming traffic
+5.3 Check UFW Status
+bash
+Copy code
+sudo ufw status
+5.4 Restart UFW to Apply Changes
+bash
+Copy code
+sudo ufw reload
+Step 6: Test the Challenge
+Now, it's time to test the challenge and verify everything is working.
 
-Create a misconfigured firewall setup that allows access to services like MySQL and SSH, but restricts HTTPS to force participants to use HTTP.
+6.1 Access the Login Page
+Open a web browser and navigate to http://<server-ip>/login.php.
 
-    Enable and Configure UFW
+Try the default credentials:
 
-    Enable UFW and configure the rules as follows:
+Username: KingCeo, Password: SigmaWolf123
+Username: Ted Smith, Password: Hacked123
+Test SQL injection:
 
-    ```bash
+Try entering admin' OR '1'='1 as the password to exploit the vulnerability and log in as admin to access the real flag.
+6.2 Explore Red Herrings
+Use curl or a directory scanner like dirb to search for /fake_flags/ and view the fake flag files.
 
-    sudo ufw enable
-    sudo ufw default deny incoming
-    sudo ufw allow 80/tcp    # Allow HTTP
-    sudo ufw allow 3306/tcp  # Leave MySQL open for exploration
-    sudo ufw allow 22/tcp    # Leave SSH open for SSH access
-    sudo ufw deny 443/tcp    # Block HTTPS (forces HTTP)
-    ```
-Step 6: Testing the Challenge
+6.3 Verify Database Exposure
+You can use nmap to verify that port 3306 (MySQL) is exposed to the public:
 
-    Test the Vulnerable Login Page
-        Navigate to http://<server-ip>/login.php and try entering credentials like admin/password123 to see if it works.
-        Then, try SQL injection using the payload: admin' OR '1'='1 to bypass authentication.
-
-    Test the Red Herrings
-        Use tools like curl and dirb to find the directories and confirm that fake flags are accessible.
+bash
+Copy code
+nmap -p 3306 <server-ip>
+Step 7: Verify Challenge Completion
+Log in as admin to view the real flag: 402acb1c3e3f37da6e1bb6cacadc315d.
+Test the SQL injection vulnerability with admin' OR '1'='1.
+Check for the fake flags under /fake_flags/.
+Security Disclaimer
+This setup intentionally creates vulnerabilities for controlled practice. It should never be used in production environments. Always secure your systems after completing the challenge setup.
