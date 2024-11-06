@@ -68,7 +68,6 @@ sudo nano /var/www/html/login.php
 3.2 Add the Vulnerable PHP Code
 Insert the following PHP code into login.php:
 ```php
-Copy code
 <?php
 // Database connection
 $host = 'localhost';
@@ -126,14 +125,12 @@ Set up directories and files that will serve as fake flags to mislead users duri
 
 4.1 Create Directories for Fake Flags
 ```bash
-Copy code
 sudo mkdir -p /var/www/html/fake_flags/images
 sudo mkdir -p /var/www/html/fake_flags/text_files
 ```
 
 4.2 Create Fake Flag Files (will add some more files with memes later)
 ```bash
-Copy code
 echo "This is not the real flag. Fake flag: FLAG{FAKE_FLAG_1}" | sudo tee /var/www/html/fake_flags/text_files/fake1.txt
 echo "FLAG{FAKE_FLAG_2}" | sudo tee /var/www/html/fake_flags/text_files/fake2.txt
 ```
@@ -146,7 +143,6 @@ sudo nano /var/www/html/fake_flags/fake_flag1.html
 Add this content:
 
 ```html
-Copy code
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -178,7 +174,6 @@ sudo ufw default deny incoming  # Deny all other incoming traffic
 ```
 5.3 Check UFW Status
 ```bash
-Copy code
 sudo ufw status
 ```
 
