@@ -2,37 +2,39 @@ Step 1: Install Apache and MySQL (LAMP Stack)
 Before setting up the vulnerable PHP page, ensure you have a LAMP (Linux, Apache, MySQL, PHP) stack installed on your machine. If it’s not already installed, follow these steps to install it.
 
 1.1 Install Apache Web Server
-'''bash
-Copy code
+```bash
 sudo apt update
 sudo apt install apache2
 ```
+
 1.2 Install MySQL Server
-bash
-Copy code
+```bash
 sudo apt install mysql-server
+```
+
 1.3 Install PHP and Required Extensions
-bash
-Copy code
+```bash
 sudo apt install php php-mysqli libapache2-mod-php
+```
+
 1.4 Restart Apache to Apply Changes
-bash
-Copy code
+```bash
 sudo systemctl restart apache2
+```
+
 Step 2: Configure MySQL Database
 Create a MySQL database and a users table for storing login credentials.
 
 2.1 Log in to MySQL
-bash
-Copy code
+```bash
 sudo mysql -u root -p
+```
 2.2 Create the Database
-sql
-Copy code
+```sql
 CREATE DATABASE ctf_challenge;
+```
 2.3 Create the users Table
-sql
-Copy code
+```sql
 USE ctf_challenge;
 
 CREATE TABLE users (
@@ -41,31 +43,31 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     flag VARCHAR(255) DEFAULT NULL
 );
+```
 2.4 Insert Users
 Insert the users into the users table with a vulnerable SELECT query. The admin account will contain the real flag.
 
-sql
-Copy code
+```sql
 INSERT INTO users (username, password, flag) 
 VALUES 
     ('KingCeo', 'SigmaWolf123', NULL),
     ('Ted Smith', 'Hacked123', NULL),
     ('admin', 'password123', '402acb1c3e3f37da6e1bb6cacadc315d'); -- real flag hidden under admin
+```
 2.5 Exit MySQL
-sql
-Copy code
+```sql
 EXIT;
+```
 Step 3: Create the Vulnerable Login Page
 Create the vulnerable login.php file that allows for SQL injection.
 
 3.1 Create login.php File
-bash
-Copy code
+```bash
 sudo nano /var/www/html/login.php
+```
 3.2 Add the Vulnerable PHP Code
 Insert the following PHP code into login.php:
-
-php
+```php
 Copy code
 <?php
 // Database connection
@@ -115,6 +117,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </form>
 </body>
 </html>
+```
 3.3 Save and Close the File
 Press CTRL+X, then Y to save the file and exit.
 
@@ -122,24 +125,27 @@ Step 4: Create Fake Flag Files (Red Herrings)
 Set up directories and files that will serve as fake flags to mislead users during their exploration.
 
 4.1 Create Directories for Fake Flags
-bash
+```bash
 Copy code
 sudo mkdir -p /var/www/html/fake_flags/images
 sudo mkdir -p /var/www/html/fake_flags/text_files
-4.2 Create Fake Flag Files
-bash
+```
+
+4.2 Create Fake Flag Files (will add some more files with memes later)
+```bash
 Copy code
 echo "This is not the real flag. Fake flag: FLAG{FAKE_FLAG_1}" | sudo tee /var/www/html/fake_flags/text_files/fake1.txt
 echo "FLAG{FAKE_FLAG_2}" | sudo tee /var/www/html/fake_flags/text_files/fake2.txt
+```
+
 4.3 Create Fake Flag HTML Pages
 Create fake_flag1.html and other similar fake pages.
-
-bash
-Copy code
+```bash
 sudo nano /var/www/html/fake_flags/fake_flag1.html
+```
 Add this content:
 
-html
+```html
 Copy code
 <!DOCTYPE html>
 <html lang="en">
@@ -152,31 +158,34 @@ Copy code
     <p>Fake flag: FLAG{FAKE_FLAG_1}</p>
 </body>
 </html>
+```
 Repeat the process for additional fake flag pages (fake_flag2.html, etc.).
 
 Step 5: Configure the Misconfigured Firewall
 Set up UFW (Uncomplicated Firewall) to expose MySQL and restrict services as intended.
 
 5.1 Enable UFW and Expose MySQL Port
-bash
-Copy code
+```bash
 sudo ufw enable
 sudo ufw allow 3306/tcp     # Allow MySQL port
+```
 5.2 Restrict Other Services
-bash
-Copy code
+```bash
 sudo ufw allow 80/tcp       # Allow HTTP
 sudo ufw deny 443/tcp       # Block HTTPS
 sudo ufw allow from 192.168.1.100 to any port 22  # Restrict SSH to a specific IP (optional)
 sudo ufw default deny incoming  # Deny all other incoming traffic
+```
 5.3 Check UFW Status
-bash
+```bash
 Copy code
 sudo ufw status
+```
+
 5.4 Restart UFW to Apply Changes
-bash
-Copy code
+```bash
 sudo ufw reload
+```
 Step 6: Test the Challenge
 Now, it's time to test the challenge and verify everything is working.
 
@@ -196,12 +205,13 @@ Use curl or a directory scanner like dirb to search for /fake_flags/ and view th
 6.3 Verify Database Exposure
 You can use nmap to verify that port 3306 (MySQL) is exposed to the public:
 
-bash
-Copy code
+```bash
 nmap -p 3306 <server-ip>
+```
 Step 7: Verify Challenge Completion
 Log in as admin to view the real flag: 402acb1c3e3f37da6e1bb6cacadc315d.
 Test the SQL injection vulnerability with admin' OR '1'='1.
 Check for the fake flags under /fake_flags/.
+
 Security Disclaimer
 This setup intentionally creates vulnerabilities for controlled practice. It should never be used in production environments. Always secure your systems after completing the challenge setup.
