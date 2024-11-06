@@ -91,10 +91,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        echo "Login successful! Welcome, " . $row['username'] . "<br>";
-        if ($row['flag']) {
-            echo "Your flag is: " . $row['flag'];
-        }
+        
+        // Redirect to index.html after successful login
+        header("Location: /index.html");
+        exit();
     } else {
         echo "Invalid login credentials!";
     }
