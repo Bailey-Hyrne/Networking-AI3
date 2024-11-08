@@ -1,39 +1,41 @@
 Step 1: Install Apache and MySQL (LAMP Stack)
-Before setting up the vulnerable PHP page, ensure you have a LAMP (Linux, Apache, MySQL, PHP) stack installed on your machine. If it’s not already installed, follow these steps to install it.
+If you haven’t already installed Apache, MySQL, and PHP, follow these steps:
 
-1.1 Install Apache Web Server
+Install Apache Web Server
 ```bash
 sudo apt update
 sudo apt install apache2
 ```
-
-1.2 Install MySQL Server
+Install MySQL Server
 ```bash
 sudo apt install mysql-server
 ```
-
-1.3 Install PHP and Required Extensions
+Install PHP and Required Extensions
 ```bash
 sudo apt install php php-mysqli libapache2-mod-php
 ```
-
-1.4 Restart Apache to Apply Changes
+Restart Apache to Apply Changes
 ```bash
 sudo systemctl restart apache2
 ```
-
 Step 2: Configure MySQL Database
-Create a MySQL database and a users table for storing login credentials.
-
-2.1 Log in to MySQL
+Log in to MySQL
 ```bash
-sudo mysql -u root -p
+sudo mysql
 ```
-2.2 Create the Database
+Create the Database
 ```sql
 CREATE DATABASE ctf_challenge;
 ```
-2.3 Create the users Table
+Create a Database User
+```sql
+CREATE USER 'ctf_user'@'localhost' IDENTIFIED BY 'secure_password';
+
+GRANT ALL PRIVILEGES ON ctf_challenge.* TO 'ctf_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Create the users Table
 ```sql
 USE ctf_challenge;
 
@@ -43,37 +45,30 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     flag VARCHAR(255) DEFAULT NULL
 );
-```
-2.4 Insert Users
-Insert the users into the users table with a vulnerable SELECT query. The admin account will contain the real flag.
 
-```sql
 INSERT INTO users (username, password, flag) 
 VALUES 
     ('KingCeo', 'SigmaWolf123', NULL),
     ('Ted Smith', 'Hacked123', NULL),
     ('admin', 'password123', '402acb1c3e3f37da6e1bb6cacadc315d'); -- real flag hidden under admin
 ```
-2.5 Exit MySQL
+Exit MySQL
 ```sql
 EXIT;
 ```
 Step 3: Create the Vulnerable Login Page
-Create the vulnerable login.php file that allows for SQL injection.
-
-3.1 Create login.php File
+Create login.php File
 ```bash
 sudo nano /var/www/html/login.php
 ```
-3.2 Add the Vulnerable PHP Code
-Insert the following PHP code into login.php:
+Add the Vulnerable PHP Code
 ```php
 <?php
 // Database connection
 $host = 'localhost';
 $db = 'ctf_challenge';
-$user = 'root';
-$pass = '';
+$user = 'ctf_user';
+$pass = 'secure_password';
 
 $conn = new mysqli($host, $user, $pass, $db);
 
@@ -81,22 +76,31 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+$flag = ''; // Variable to store the flag
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Vulnerable query without escaping inputs
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // Vulnerable query
     $query = "SELECT * FROM users WHERE username='$username' AND password='$password'";
     $result = $conn->query($query);
 
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
         
-        // Redirect to index.html after successful login
-        header("Location: /index.html");
-        exit();
+        // If the user is admin, show the flag
+        if ($row['username'] == 'admin') {
+            $flag = $row['flag'];
+            echo "<h1>Welcome, " . htmlspecialchars($username) . "!</h1>";
+            echo "<p>Congratulations! You have found the real flag: <strong>" . $flag . "</strong></p>";
+        } else {
+            // For KingCeo and Ted Smith, redirect to index.html
+            header("Location: /index.html");
+            exit();
+        }
     } else {
-        echo "Invalid login credentials!";
+        echo "<p>Invalid login credentials!</p>";
     }
 }
 ?>
@@ -116,14 +120,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </form>
 </body>
 </html>
+
+
 ```
-3.3 Save and Close the File
-Press CTRL+X, then Y to save the file and exit.
+Save and Close the File
 
 Step 4: Create index.html
+Create index.html File
 ```bash
 sudo nano /var/www/html/index.html
-#insert this into file
+```
+Add HTML Content
+Insert the following HTML content into the file:
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -151,143 +160,82 @@ sudo nano /var/www/html/index.html
 </body>
 </html>
 ```
+Save and Close the File
 
-4.1 Create styles.css
-```bash
-sudo nano /var/www/html/styles.css
-#insert this
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f4f8;
-    color: #333;
-    margin: 0;
-    padding: 0;
-}
-
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    background-color: #fff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-    margin-top: 50px;
-}
-
-h1 {
-    color: #2c3e50;
-    text-align: center;
-}
-
-h2 {
-    color: #34495e;
-    margin-top: 20px;
-}
-
-p, ul {
-    line-height: 1.6;
-}
-
-ul {
-    margin-left: 20px;
-}
-
-code {
-    background-color: #eaeaea;
-    padding: 2px 4px;
-    border-radius: 4px;
-    color: #c0392b;
-    font-size: 0.95em;
-}
-```
 
 Step 5: Create Fake Flag Files (Red Herrings)
-Set up directories and files that will serve as fake flags to mislead users during their exploration.
-
-5.1 Create Directories for Fake Flags
+Create Directories for Fake Flags
 ```bash
-sudo mkdir -p /var/www/html/fake_flags/images
-sudo mkdir -p /var/www/html/fake_flags/text_files
+sudo mkdir -p /var/www/html/images
+sudo mkdir -p /var/www/html/text_files
+sudo mkdir -p /var/www/html/videos
 ```
-
-5.2 Create Fake Flag Files (will add some more files with memes later)
+Create Fake Flag Files
 ```bash
-echo "This is not the real flag. Fake flag: FLAG{FAKE_FLAG_1}" | sudo tee /var/www/html/fake_flags/text_files/fake1.txt
-echo "FLAG{FAKE_FLAG_2}" | sudo tee /var/www/html/fake_flags/text_files/fake2.txt
+echo <a href="https://raw.githubusercontent.com/Bailey-Hyrne/Networking-AI3/refs/heads/main/goofy1.webp">Flaig</a> | sudo tee /var/www/html/images/flag11514.html
+
+echo "Every morning I wake up and I turn on my computer. I put my sunglasses on because the light hurts my eyes. I put on my typing gloves. I connect to the internet web through 8 proxies and then I hack until sundown. I'm probably the best hacker I know; I've hit banks, schools, doctors offices, oil tanks, farms, FedEx, Walmart, KFC, grocery stores. You name it, I probably hacked into it. I even have it set up where I can see the grocery transactions in my term window as they happen. I have 6 monitors hooked up in parallel, plus 1 digital eye piece that projects stats onto my eye. There's only one drink I know, and that's Jolt. Right after I'm finished hacking for the day, I read this and then fall asleep knowing I'm probably the most elite hacker on Earth, totally unstoppable:
+
+This is our world now... the world of the electron and the switch, the beauty of the baud. We make use of a service already existing without paying for what could be dirt-cheap if it wasn't run by profiteering gluttons, and you call us criminals. We explore... and you call us criminals. We seek after knowledge... and you call us criminals. We exist without skin color, without nationality, without religious bias... and you call us criminals. You build atomic bombs, you wage wars, you murder, cheat, and lie to us and try to make us believe it's for our own good, yet we're the criminals.
+" | sudo tee /var/www/html/text_files/flag.txt
+
+echo "Linux Genuine Advantage is an exciting and mandatory new way for you to place your computer under the remote control of an untrusted third party!
+
+According to an independent study conducted by some scientists, many users of Linux are running non-Genuine versions of their operating system. This puts them at the disadvantage of having their computers work normally, without periodically phoning home unannounced to see if it's OK for their computer to continue functioning. These users are also missing out on the Advantage of paying ongoing licensing fees to ensure their computer keeps operating properly.
+
+Linux Genuine Advantage works by checking our licensing server periodically to make sure that the copy of Linux you are running is Genuine. This is determined by whether you have paid us the appropriate licensing fees. If you are out of compliance, and are past the grace period, logins to your machine will be disabled until the license fees are paid. How to log in to enter the license key when logins are disabled is left as an exercise for the reader.
+
+Finally! Linux users can experience a feature that until now remained the exclusive domain of proprietary software.
+" | sudo tee /var/www/html/text_files/galf.txt
+
+echo <iframe width="560" height="315" src="https://www.youtube.com/watch?v=xvFZjo5PgG0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe> | sudo tee /var/www/html/videos/flag?.html
+
+echo <iframe width="560" height="315" src="https://www.youtube.com/watch?v=PmD6ONQqi9Y" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe> | sudo tee /var/www/html/videos/FLAGGG?!.html
+
 ```
 
-5.3 Create Fake Flag HTML Pages
-Create fake_flag1.html and other similar fake pages.
-```bash
-sudo nano /var/www/html/fake_flags/fake_flag1.html
-```
-Add this content:
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Fake Flag 1</title>
-</head>
-<body>
-    <h1>This is not the real flag.</h1>
-    <p>Fake flag: FLAG{FAKE_FLAG_1}</p>
-</body>
-</html>
-```
-Repeat the process for additional fake flag pages (fake_flag2.html, etc.).
-
-Step 6: Configure the Misconfigured Firewall
-Set up UFW (Uncomplicated Firewall) to expose MySQL and restrict services as intended.
-
-6.1 Enable UFW and Expose MySQL Port
+Step 6: Configure the Firewall
+Enable UFW and Expose MySQL Port
 ```bash
 sudo ufw enable
 sudo ufw allow 3306/tcp     # Allow MySQL port
 ```
-6.2 Restrict Other Services
+Restrict Other Services
 ```bash
 sudo ufw allow 80/tcp       # Allow HTTP
 sudo ufw deny 443/tcp       # Block HTTPS
-sudo ufw allow from 192.168.1.100 to any port 22  # Restrict SSH to a specific IP (optional)
 sudo ufw default deny incoming  # Deny all other incoming traffic
 ```
-6.3 Check UFW Status
+Check UFW Status
 ```bash
 sudo ufw status
 ```
-
-6.4 Restart UFW to Apply Changes
+Restart UFW to Apply Changes
 ```bash
 sudo ufw reload
 ```
-Step 7: Test the Challenge
-Now, it's time to test the challenge and verify everything is working.
 
-7.1 Access the Login Page
-Open a web browser and navigate to http://<server-ip>/login.php.
-
-Try the default credentials:
-
-Username: KingCeo, Password: SigmaWolf123
-Username: Ted Smith, Password: Hacked123
-Test SQL injection:
-Try entering admin' OR '1'='1 as the password to exploit the vulnerability and log in as admin to access the real flag.
-
-7.2 Explore Red Herrings
-Use curl or a directory scanner like dirb to search for /fake_flags/ and view the fake flag files.
-
-7.3 Verify Database Exposure
-You can use nmap to verify that port 3306 (MySQL) is exposed to the public:
-
+Step 7: Restart Services and Test Challenge
 ```bash
-nmap -p 3306 <server-ip>
+sudo systemctl restart apache2
+sudo systemctl status apache2
 ```
-Step 8: Verify Challenge Completion
-Log in as admin to view the real flag: 402acb1c3e3f37da6e1bb6cacadc315d.
-Test the SQL injection vulnerability with admin' OR '1'='1.
-Check for the fake flags under /fake_flags/.
 
-Security Disclaimer:
-This setup intentionally creates vulnerabilities for controlled practice. It should never be used in production environments. Always secure your systems after completing the challenge setup.
+Open a web browser and navigate to http://localhost/login.php
+
+Username: KingCeo or Ted Smith
+Password: SigmaWolf123 or Hacked123
+After logging in with KingCeo or Ted Smith, the user will be redirected to the index.html page.
+
+Try SQL Injection (for admin user)
+Username: admin
+Password: password123
+After logging in as admin, the real flag will be displayed.
+
+Verify Database Exposure
+You can verify that port 3306 (MySQL) is exposed by using nmap
+
+Step 9: Verify Challenge Completion
+Log in as admin to view the real flag: 402acb1c3e3f37da6e1bb6cacadc315d.
+Test SQL injection with admin' OR '1'='1 to access the admin account.
+Check the fake flags to ensure they are working as decoys
